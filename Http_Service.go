@@ -143,7 +143,7 @@ func setupHTTPServer() *gin.Engine {
 	})
 
 	// 文件 / 文件夹 上传
-	r.POST("/upload", handleUpload})
+	r.POST("/upload", handleUpload)
 
 	// 文件下载
 	r.GET("/download", func(c *gin.Context) {

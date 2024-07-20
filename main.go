@@ -20,6 +20,9 @@ func main() {
 	// 	})
 	// })
 
+	// 设置可信代理
+	httpServer.SetTrustedProxies([]string{"192.168.1.1"}) // 你的负载均衡器或反向代理的IP地址
+
 	// 启动 HTTP 服务
 	httpServer.Run(":6430")
 }

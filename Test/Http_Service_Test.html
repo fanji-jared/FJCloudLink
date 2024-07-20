@@ -8,23 +8,25 @@
 <body>
     <h1>文件上传测试</h1>
     <form id="uploadForm" enctype="multipart/form-data">
-        <input type="file" id="fileInput" name="file" />
-        <button type="button" onclick="uploadFile()">上传文件</button>
+        <input type="file" id="fileInput" name="files" multiple webkitdirectory directory />
+        <button type="button" onclick="uploadFile()">上传文件夹/文件</button>
     </form>
     <div id="response"></div>
 
     <script>
         function uploadFile() {
             var fileInput = document.getElementById('fileInput');
-            var file = fileInput.files[0];
+            var files = fileInput.files;
 
-            if (!file) {
-                alert('请选择一个文件');
+            if (files.length === 0) {
+                alert('请选择一个或多个文件');
                 return;
             }
 
             var formData = new FormData();
-            formData.append('file', file);
+            for (var i = 0; i < files.length; i++) {
+                formData.append('files', files[i]);
+            }
 
             var xhr = new XMLHttpRequest();
             xhr.open('POST', 'http://localhost:6430/upload', true);

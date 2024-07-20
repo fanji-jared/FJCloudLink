@@ -9,93 +9,86 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 )
 
+const (
+	// 最大文件大小为10MB
+	maxFileSize = 1024 * 1024 * 10
+	// 最大文件名长度为255个字符
+	maxFileNameLength = 255
+	// 最大文件数量为10个
+	maxFiles = 10
+)
+
+// 定义允许的文件类型
+var allowedTypes = []string{
+	"text/plain", "text/markdown", "text/csv", "text/html", "text/css",
+	"text/javascript", "application/pdf", "application/msword",
+	"application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+	"application/vnd.ms-excel", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+	"application/vnd.ms-powerpoint", "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+	"application/x-dxf", "application/x-eps", "application/x-latex",
+	"application/x-compressed", "video/*", "audio/*", "model/*",
+}
+
 func handleUpload(c *gin.Context) {
-	form, _ := c.MultipartForm()
+	// 获取上传的文件
+	form, err := c.MultipartForm()
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
 	files := form.File["files"]
 
-	// 检查上传的文件数量
-	if len(files) == 1 {
-		// 处理单个文件上传
-		file := files[0]
-		err := saveFile(file, "./uploads/")
-		if err != nil {
+	// 检查是否有文件上传
+	if len(files) == 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "没有选择任何文件"})
+		return
+	}
+
+	// 检查文件总数是否超过限制
+	if len(files) > maxFiles {
+		c.JSON(http.StatusTooManyRequests, gin.H{"error": fmt.Sprintf("上传的文件数量过多，最多允许%d个文件", maxFiles)})
+		return
+	}
+
+	// 遍历所有文件并保存
+	for _, fileHeader := range files {
+		if err := saveFile(fileHeader, "./uploads/"); err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
 		}
-		c.JSON(http.StatusOK, gin.H{"status": "uploaded", "file": file.Filename})
+	}
+
+	// 发送成功响应
+	if len(files) == 1 {
+		c.JSON(http.StatusOK, gin.H{"status": "uploaded", "file": files[0].Filename})
 	} else {
-		// 处理文件夹上传
-		for _, file := range files {
-			err := saveFile(file, "./uploads/")
-			if err != nil {
-				c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-				return
-			}
-		}
 		c.JSON(http.StatusOK, gin.H{"status": "uploadedFolder", "files": len(files)})
 	}
 }
 
 func saveFile(file *multipart.FileHeader, uploadDir string) error {
 	// 确保上传目录存在
-	err := os.MkdirAll(uploadDir, os.ModePerm)
-	if err != nil {
+	if err := os.MkdirAll(uploadDir, 0755); err != nil {
 		return err
 	}
 
 	// 检查文件大小限制
-	if file.Size > 10*1024*1024 { // 限制文件大小为10MB
+	if file.Size > maxFileSize {
 		return fmt.Errorf("文件大小超过限制")
 	}
 
 	// 检查文件类型限制
-	allowedTypes := map[string]bool{
-		// 文本格式
-		// "text/*": true, // 所有文本文件
-		"text/plain":      true, // 纯文本文件
-		"text/markdown":   true, // Markdown文件
-		"text/csv":        true, // CSV文件
-		"text/html":       true, // HTML文件
-		"text/css":        true, // CSS文件
-		"text/javascript": true, // JavaScript文件
-
-		// 文档格式
-		"application/pdf":    true, // PDF文档
-		"application/msword": true, // Word文档
-		"application/vnd.openxmlformats-officedocument.wordprocessingml.document": true, // Word文档（新格式）
-		"application/vnd.ms-excel": true, // Excel文档
-		"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet":         true, // Excel文档（新格式）
-		"application/vnd.ms-powerpoint":                                             true, // PowerPoint文档
-		"application/vnd.openxmlformats-officedocument.presentationml.presentation": true, // PowerPoint文档（新格式）
-		"application/x-dxf":   true, // DXF文件
-		"application/x-eps":   true, // EPS文件
-		"application/x-latex": true, // LaTeX文件
-
-		// 统一格式
-		"application/x-compressed": true, // 所有压缩文件
-		"video/*":                  true, // 所有视频文件
-		"audio/*":                  true, // 所有音频文件
-		"image/*":                  true, // 所有图片文件
-		"model/*":                  true, // 所有模型文件
-
-		// 不允许
-		"application/x-msdownload": false, // 所有可执行文件
-	}
-	if _, ok := allowedTypes[file.Header.Get("Content-Type")]; !ok {
+	if !isAllowedType(file.Header.Get("Content-Type")) {
 		return fmt.Errorf("不允许的文件类型")
 	}
 
 	// 检查文件名长度限制
-	if len(file.Filename) > 255 {
+	if len(file.Filename) > maxFileNameLength {
 		return fmt.Errorf("文件名过长")
-	}
-
-	// 检查文件数量限制
-	if file.Size > 10 {
-		return fmt.Errorf("文件数量超过限制")
 	}
 
 	// 打开上传的文件
@@ -106,7 +99,8 @@ func saveFile(file *multipart.FileHeader, uploadDir string) error {
 	defer src.Close()
 
 	// 创建目标文件
-	dst, err := os.Create(filepath.Join(uploadDir, sanitizeFilename(file.Filename)))
+	safeFilename := sanitizeFilename(file.Filename)
+	dst, err := os.Create(filepath.Join(uploadDir, safeFilename))
 	if err != nil {
 		return err
 	}
@@ -121,13 +115,32 @@ func saveFile(file *multipart.FileHeader, uploadDir string) error {
 	return nil
 }
 
-// sanitizeFilename 清理文件名，防止路径遍历攻击
+// 判断文件类型是否被允许
+func isAllowedType(mimeType string) bool {
+
+	// 遍历允许的文件类型
+	for _, t := range allowedTypes {
+		// 如果文件类型等于允许的类型或者以允许的类型开头，则返回true
+		if mimeType == t || strings.HasPrefix(mimeType, t+";") {
+			return true
+		}
+	}
+
+	// 如果文件类型不在允许的类型中，则返回false
+	return false
+}
+
 func sanitizeFilename(filename string) string {
-	return strings.ReplaceAll(filename, "..", "")
+	// 使用更安全的清理方式
+	safeName := filepath.Base(filename)
+	return strings.ReplaceAll(safeName, "..", "")
 }
 
 func SetupHTTPServer() *gin.Engine {
 	r := gin.Default()
+
+	// 允许跨域请求
+	r.Use(cors.Default())
 
 	// 用户注册
 	r.POST("/register", func(c *gin.Context) {

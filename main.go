@@ -1,3 +1,9 @@
+package main
+
+import (
+	"github.com/fanji-jared/FJCloudLink/Service"
+)
+
 func main() {
 	// 启动 gRPC 服务
 	// go func() {
@@ -5,7 +11,7 @@ func main() {
 	// }()
 
 	// 设置 HTTP 服务
-	httpServer := setupHTTPServer()
+	httpServer := Service.SetupHTTPServer()
 
 	// 添加 gRPC handler 到 Gin
 	// httpServer.Any("/file/*any", func(c *gin.Context) {

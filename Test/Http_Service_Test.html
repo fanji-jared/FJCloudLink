@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>文件上传测试</title>
+</head>
+<body>
+    <h1>文件上传测试</h1>
+    <form id="uploadForm" enctype="multipart/form-data">
+        <input type="file" id="fileInput" name="file" />
+        <button type="button" onclick="uploadFile()">上传文件</button>
+    </form>
+    <div id="response"></div>
+
+    <script>
+        function uploadFile() {
+            var fileInput = document.getElementById('fileInput');
+            var file = fileInput.files[0];
+
+            if (!file) {
+                alert('请选择一个文件');
+                return;
+            }
+
+            var formData = new FormData();
+            formData.append('file', file);
+
+            var xhr = new XMLHttpRequest();
+            xhr.open('POST', 'http://localhost:6430/upload', true);
+
+            xhr.onload = function () {
+                if (xhr.status === 200) {
+                    document.getElementById('response').innerText = '文件上传成功！';
+                } else {
+                    document.getElementById('response').innerText = '文件上传失败，状态码：' + xhr.status;
+                }
+            };
+
+            xhr.send(formData);
+        }
+    </script>
+</body>
+</html>

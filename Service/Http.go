@@ -1,16 +1,15 @@
-package main
+package Service
 
 import (
-	"github.com/gin-gonic/gin"
-	"net/http"
 	"fmt"
-	"github.com/gin-gonic/gin"
 	"io"
 	"mime/multipart"
 	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/gin-gonic/gin"
 )
 
 func handleUpload(c *gin.Context) {
@@ -56,31 +55,31 @@ func saveFile(file *multipart.FileHeader, uploadDir string) error {
 	allowedTypes := map[string]bool{
 		// 文本格式
 		// "text/*": true, // 所有文本文件
-		"text/plain": true, // 纯文本文件
-		"text/markdown": true, // Markdown文件
-		"text/csv": true, // CSV文件
-		"text/html": true, // HTML文件
-		"text/css": true, // CSS文件
+		"text/plain":      true, // 纯文本文件
+		"text/markdown":   true, // Markdown文件
+		"text/csv":        true, // CSV文件
+		"text/html":       true, // HTML文件
+		"text/css":        true, // CSS文件
 		"text/javascript": true, // JavaScript文件
 
 		// 文档格式
-		"application/pdf": true, // PDF文档
+		"application/pdf":    true, // PDF文档
 		"application/msword": true, // Word文档
 		"application/vnd.openxmlformats-officedocument.wordprocessingml.document": true, // Word文档（新格式）
 		"application/vnd.ms-excel": true, // Excel文档
-		"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": true, // Excel文档（新格式）
-		"application/vnd.ms-powerpoint": true, // PowerPoint文档
+		"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet":         true, // Excel文档（新格式）
+		"application/vnd.ms-powerpoint":                                             true, // PowerPoint文档
 		"application/vnd.openxmlformats-officedocument.presentationml.presentation": true, // PowerPoint文档（新格式）
-		"application/x-dxf": true, // DXF文件
-		"application/x-eps": true, // EPS文件
+		"application/x-dxf":   true, // DXF文件
+		"application/x-eps":   true, // EPS文件
 		"application/x-latex": true, // LaTeX文件
 
 		// 统一格式
 		"application/x-compressed": true, // 所有压缩文件
-		"video/*": true, // 所有视频文件
-		"audio/*": true, // 所有音频文件
-		"image/*": true, // 所有图片文件
-		"model/*": true, // 所有模型文件
+		"video/*":                  true, // 所有视频文件
+		"audio/*":                  true, // 所有音频文件
+		"image/*":                  true, // 所有图片文件
+		"model/*":                  true, // 所有模型文件
 
 		// 不允许
 		"application/x-msdownload": false, // 所有可执行文件
@@ -95,7 +94,7 @@ func saveFile(file *multipart.FileHeader, uploadDir string) error {
 	}
 
 	// 检查文件数量限制
-	if len(files) > 10 {
+	if file.Size > 10 {
 		return fmt.Errorf("文件数量超过限制")
 	}
 
@@ -127,7 +126,7 @@ func sanitizeFilename(filename string) string {
 	return strings.ReplaceAll(filename, "..", "")
 }
 
-func setupHTTPServer() *gin.Engine {
+func SetupHTTPServer() *gin.Engine {
 	r := gin.Default()
 
 	// 用户注册

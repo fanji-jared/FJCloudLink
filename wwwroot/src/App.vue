@@ -1,17 +1,28 @@
 <template>
-  <img alt="Vue logo" src="./assets/logo.png">
-  <HelloWorld msg="Welcome to Your Vue.js App"/>
+  <div>
+    <img alt="Vue logo" src="./assets/logo.png" />
+    <HelloWorld msg="Welcome to Your Vue.js App" />
+    <FileUploadVue action="https://www.mocky.io/v2/5e4bafc63100007100d8b70f"></FileUploadVue>
+  </div>
 </template>
 
 <script>
-import HelloWorld from './components/HelloWorld.vue'
+import FileUploadVue from './components/FileUpload.vue';
+import HelloWorld from "./components/HelloWorld.vue";
 
 export default {
-  name: 'App',
+  name: "App",
   components: {
-    HelloWorld
-  }
-}
+    HelloWorld,
+    FileUploadVue,
+  },
+  data() {
+    return {
+    };
+  },
+  methods: {
+  },
+};
 </script>
 
 <style>
